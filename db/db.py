@@ -723,7 +723,7 @@ class DB(object):
     >>> db = DB(dbname="AdventureWorks2012", dbtype="mssql")
     """
     def __init__(self, username=None, password=None, hostname="localhost",
-            port=None, filename=None, dbname=None, dbtype=None, schemas=None,
+            port=None, filename=None, dbname=None, dbtype=None, schemas=None, pg_service=None,
             profile="default", exclude_system_tables=True, limit=1000, keys_per_column=None):
 
         if port is None:
@@ -757,6 +757,7 @@ class DB(object):
             self.schemas = schemas
             self.limit = limit
             self.keys_per_column = keys_per_column
+            self.pg_service = pg_service
 
         if self.dbtype is None:
             raise Exception("Database type not specified! Must select one of: postgres, sqlite, mysql, mssql, or redshift")
@@ -765,7 +766,10 @@ class DB(object):
         if self.dbtype=="postgres" or self.dbtype=="redshift":
             if not HAS_PG:
                 raise Exception("Couldn't find psycopg2 library. Please ensure it is installed")
-            self.con = pg.connect(user=self.username, password=self.password,
+            if self.pg_service:
+                self.con = pg.connect('service={}'.format(self.pg_service))
+            else:
+                self.con = pg.connect(user=self.username, password=self.password,
                 host=self.hostname, port=self.port, dbname=self.dbname)
             self.cur = self.con.cursor()
         elif self.dbtype=="sqlite":
@@ -867,6 +871,7 @@ class DB(object):
             self.schemas = creds.get('schemas')
             self.limit = creds.get('limit')
             self.keys_per_column = creds.get('keys_per_column')
+            self.pg_service = creds.get('pg_service')
         else:
             raise Exception("Credentials not configured!")
 
@@ -905,6 +910,7 @@ class DB(object):
             "schemas": self.schemas,
             "limit": self.limit,
             "keys_per_column": self.keys_per_column,
+            "pg_service": self.pg_service,
         }
         with open(dotfile, 'wb') as f:
             data = json.dumps(creds)
@@ -1307,7 +1313,7 @@ class DB(object):
             from boto.s3.connection import Location
 
             # if boto is present, set the bucket_location to default.
-            # we can't do this in the function definition because we're 
+            # we can't do this in the function definition because we're
             # lazily importing boto only if necessary here.
             if bucket_location is None:
                 bucket_location = Location.DEFAULT
