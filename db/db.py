@@ -742,7 +742,7 @@ class DB(object):
             else:
                 raise Exception("Database type not specified! Must select one of: postgres, sqlite, mysql, mssql, or redshift")
 
-        if not dbtype in ("sqlite", "mssql") and username is None:
+        if not dbtype in ("sqlite", "mssql") and username is None and pg_service is None:
             self.load_credentials(profile)
         elif dbtype=="sqlite" and filename is None:
             self.load_credentials(profile)
